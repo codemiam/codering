@@ -1,0 +1,22 @@
+version: '3.7'
+
+services:
+
+  # Nuclio - Open source FaaS enabling "serverless" runtime execution
+  # https://nuclio.io/docs/latest/introduction/
+  x:
+    image: nuclio/dashboard:stable-amd64
+    restart: always
+    ports:
+      - 8070:8070
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - data-codering-x:/tmp
+
+  #ui: TODO: unredux client
+
+  #api: TODO: symfo/nodejs API (if need be)
+
+volumes:
+  # FaaS dataset
+  data-codering-x:
