@@ -1,3 +1,5 @@
 {
- "projects": {}
+  "projects": {
+    "runtime-node": "git@github.com:codemiam/runtime-node.git"
+  }
 }
