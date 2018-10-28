@@ -1,0 +1,8 @@
+apiVersion: "nuclio.io/v1"
+kind: "Function"
+metadata:
+  name: test-php-simple
+  namespace: nuclio
+spec:
+  runtime: "shell"
+  handler: "proxy-function.sh"

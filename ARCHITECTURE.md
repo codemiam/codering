@@ -29,3 +29,34 @@ Idéalement, chaque requête est traitée par au moins deux _function workers_, 
 
 [nuclio]: https://nuclio.io/
 [unredux]: https://github.com/ivan-kleshnin/unredux
+
+## Création d'un runtime
+
+L'idée est de suivre https://nuclio.io/docs/latest/tasks/deploy-functions-from-dockerfile/ pour créer un runtime par langage[:version] supporté.
+
+On souhaite le faire pour deux raisons principales :
+
+- support de langages et versions précises, sans dépendre des versions officielles de Nuclio
+- gestion custom des environnements d'exécution des runtimes (process manager, logs, etc.)
+
+Contrairement à un _function artifact_ classique de Nuclio, à savoir une image docker contenant le runtime (php, nodejs, etc.) et le code source (fonction à exécuter dans le runtime), dans le cas de codering-x, l'artifact ne va pas contenir code source. Le code source sera transmis en tant que payload du POST client. Le point d'entrée/exécution dans le FaaS n'est donc pas une fonction « native » (écrite dans le langage du runtime), mais une fonction proxy qui doit récupérer le payload (code source) et déclencher l'exécution de ce code source dans le runtime.
+
+Le plus simple semble de coder cette fonction proxy en sh, et donc d'avoir une image dont le runtime (au sens Nuclio) est "shell". La fonction proxy pourrait d'ailleurs être toujours la même, quel que soit le runtime à appeler, car on peut découpler l'exécution de cette fonction proxy de la commande concrète lançant le runtime, en passant par un fichier .sh à fournir, runtime par runtime :
+
+- Node.js v8 => proxy-function appelle runtime.sh => runtime.sh appelle "node ..."
+  où ... représente le stream de code source initialement reçu par la proxy-function et envoyé à runtime.sh
+- PHP 7 => proxy-function appelle runtime.sh => runtime.sh appelle "php ..."
+  où ... représente (etc. pareil)
+
+Il faut arriver à voir comment runtime.sh peut être fourni pour chaque runtime.
+
+Il faudrait en fait faire une image onbuild pour la proxy-function, avec ONBUILD COPY runtime.sh /path/to/runtime.sh — ça permettrait d'ailleurs de gérer les options d'env (ex. activer une lib pour PHP).
+
+- L'image proxy-function contiendrait s6 etc. tout le runtime env partagé (gestion des logs, etc.)
+- L'image runtime spécifique contiendrait le runtime et ses dépendances, ainsi que runtime.sh pour exécution.
+
+---
+
+Une autre possibilité, c'est de faire mon propre processor (ne pas utiliser https://github.com/nuclio/nuclio/tree/master/pkg/processor/runtime/shell). En fait, ce serait l'idéal pour utiliser s6 etc.
+
+> Il faut sécuriser à terme le runtime (même si en fait on s'en fout un peu si ça plante ou si tentative de hack, puisque l'exécution est dockerisée).
