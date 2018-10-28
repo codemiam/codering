@@ -60,3 +60,7 @@ Il faudrait en fait faire une image onbuild pour la proxy-function, avec ONBUILD
 Une autre possibilité, c'est de faire mon propre processor (ne pas utiliser https://github.com/nuclio/nuclio/tree/master/pkg/processor/runtime/shell). En fait, ce serait l'idéal pour utiliser s6 etc.
 
 > Il faut sécuriser à terme le runtime (même si en fait on s'en fout un peu si ça plante ou si tentative de hack, puisque l'exécution est dockerisée).
+
+## Prototype
+
+28 oct. 2018 : runtime PHP fonctionne avec un trigger HTTP POST. De là, il est possible de faire un prototype d'UI. Coté Docker, ce serait cool d'avoir une base run-image qui fournit alpine, bash… (pas trop de trucs). Le function-proxy.sh est à créer par runtime, donc une image par langage[:version]. On peut imaginer aller encore plus loin en générant l'image à la volée pour certains exercices dans lesquels l'élève choisit d'installer une lib externe ou d'activer un réglage par exemple.

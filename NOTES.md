@@ -149,3 +149,146 @@ Première tentative d'écrire un Dockerfile pour gérer un runtime (ici PHP) acc
 docker build -t codering/test-php-simple .
 nuctl deploy test-php-simple --run-image codering/test-php-simple:latest --runtime shell --handler "proxy-function.sh" --platform local
 ```
+
+Et ça plante, "Function wasn't ready in time" etc.
+
+Ok, donc je me suis dit que cette option `--platform local` est bizarre, normalement je veux agir au sein du cluster k8s donc ce serait plutôt `--platform kube` (ou rien, car `auto`). Mais dans ce cas, la commande `nuctl deploy` plante en disant que l'image n'est pas pullable.
+
+Je pense donc qu'il faut héberger l'image dans le registry qui tourne au sein du cluster k8s :
+
+``` sh
+docker image tag codering/test-php-simple:latest $(minikube ip):5000/codering/test-php-simple
+# pas d'output, mais ok.
+```
+
+``` sh
+docker push $(minikube ip):5000/codering/test-php-simple
+89cb6417a5c4: Pushed
+43b89b4e6fa6: Pushed
+478c05496cf0: Pushed
+d639c1323ea3: Pushed
+f1aefe9f02bb: Pushed
+861b714cd9d5: Pushed
+d73042a7a71a: Pushed
+75203553d20b: Pushed
+82c67d0a2ab7: Pushed
+51dcf0366b9d: Pushed
+ae1a20d1ae91: Pushed
+df64d3292fd6: Pushed
+latest: digest: sha256:74236d1a5d7e5ab37b4d3c6e87340abc120a6b52a0327611f3cb707a4d3a5f47 size: 2828
+```
+
+Bien, nouvelle tentative avec
+
+``` sh
+nuctl deploy test-php-simple --run-image codering/test-php-simple:latest --runtime shell --handler "proxy-function.sh" --namespace nuclio --registry $(minikube ip):5000 --run-registry localhost:5000
+```
+
+Mais ça plante :
+
+``` txt
+nuctl deploy test-php-simple --run-image codering/test-php-simple:latest --runtime shell --handler "proxy-function.sh" --namespace nuclio --registry $(minikube ip):5000 --run-registry localhost:5000
+18.10.28 21:40:13.933                     nuctl (I) Deploying function {"name": "test-php-simple"}
+818.10.28 21:40:46.089                     nuctl (W) Create function failed failed, setting function status {"err": "Failed to wait for function readiness.\n\nPod logs:\n\n* test-php-simple-866c5bd44-2vw2n\n18.1
+0.28 20:40:39.406 \u001b[37m                processor\u001b[0m \u001b[33m(W)\u001b[0m Platform configuration not found, using defaults {\"path\": \"\"}\n18.10.28 20:40:39.406 \u001b[37m                processor\
+u001b[0m \u001b[32m(D)\u001b[0m Read platform configuration {\"config\": {\"webAdmin\":{\"enabled\":true,\"listenAddress\":\":8081\"},\"healthCheck\":{\"enabled\":true,\"listenAddress\":\":8082\"},\"logger\":{\"
+sinks\":{\"stdout\":{\"kind\":\"stdout\"}},\"system\":[{\"level\":\"debug\",\"sink\":\"stdout\"}],\"functions\":[{\"level\":\"debug\",\"sink\":\"stdout\"}]},\"metrics\":{}}}\n\nError - open : no such file or dir
+ectory\n    .../nuclio/nuclio/cmd/processor/app/processor.go:223\n\nCall stack:\nFailed to open configuration file\n    .../nuclio/nuclio/cmd/processor/app/processor.go:223\n\n\n* test-php-simple-f8b9bbcc8-t9464
+\n18.10.28 20:40:00.291 \u001b[37m                processor\u001b[0m \u001b[33m(W)\u001b[0m Platform configuration not found, using defaults {\"path\": \"\"}\n\nError - open : no such file or directory\n    .../
+nuclio/nuclio/cmd/processor/app/processor.go:223\n\nCall stack:\nFailed to open configuration file\n    .../nuclio/nuclio/cmd/processor/app/processor.go:223\n18.10.28 20:40:00.291 \u001b[37m                proce
+ssor\u001b[0m \u001b[32m(D)\u001b[0m Read platform configuration {\"config\": {\"webAdmin\":{\"enabled\":true,\"listenAddress\":\":8081\"},\"healthCheck\":{\"enabled\":true,\"listenAddress\":\":8082\"},\"logger\
+":{\"sinks\":{\"stdout\":{\"kind\":\"stdout\"}},\"system\":[{\"level\":\"debug\",\"sink\":\"stdout\"}],\"functions\":[{\"level\":\"debug\",\"sink\":\"stdout\"}]},\"metrics\":{}}}\n\n", "errVerbose": "\nError - F
+unction in error state (\nError - context deadline exceeded\n    .../pkg/platform/kube/controller/function.go:112\n\nCall stack:\nFailed to wait for function resources to be available\n    .../pkg/platform/kube/
+controller/function.go:112\n)\n    .../nuclio/nuclio/pkg/platform/kube/deployer.go:178\n\nCall stack:\nFunction in error state (\nError - context deadline exceeded\n    .../pkg/platform/kube/controller/function.
+go:112\n\nCall stack:\nFailed to wait for function resources to be available\n    .../pkg/platform/kube/controller/function.go:112\n)\n    .../nuclio/nuclio/pkg/platform/kube/deployer.go:178\nFailed to wait forf
+unction readiness.\n\nPod logs:\n\n* test-php-simple-866c5bd44-2vw2n\n18.10.28 20:40:39.406 \u001b[37m                processor\u001b[0m \u001b[33m(W)\u001b[0m Platform configuration not found, using defaults {\
+"path\": \"\"}\n18.10.28 20:40:39.406 \u001b[37m                processor\u001b[0m \u001b[32m(D)\u001b[0m Read platform configuration {\"config\": {\"webAdmin\":{\"enabled\":true,\"listenAddress\":\":8081\"},\"h
+ealthCheck\":{\"enabled\":true,\"listenAddress\":\":8082\"},\"logger\":{\"sinks\":{\"stdout\":{\"kind\":\"stdout\"}},\"system\":[{\"level\":\"debug\",\"sink\":\"stdout\"}],\"functions\":[{\"level\":\"debug\",\"s
+ink\":\"stdout\"}]},\"metrics\":{}}}\n\nError - open : no such file or directory\n    .../nuclio/nuclio/cmd/processor/app/processor.go:223\n\nCall stack:\nFailed to open configuration file\n    .../nuclio/nuclio
+/cmd/processor/app/processor.go:223\n\n\n* test-php-simple-f8b9bbcc8-t9464\n18.10.28 20:40:00.291 \u001b[37m                processor\u001b[0m \u001b[33m(W)\u001b[0m Platform configuration not found, using defau
+lts {\"path\": \"\"}\n\nError - open : no such file or directory\n    .../nuclio/nuclio/cmd/processor/app/processor.go:223\n\nCall stack:\nFailed to open configuration file\n    .../nuclio/nuclio/cmd/processor/a
+pp/processor.go:223\n18.10.28 20:40:00.291 \u001b[37m                processor\u001b[0m \u001b[32m(D)\u001b[0m Read platform configuration {\"config\": {\"webAdmin\":{\"enabled\":true,\"listenAddress\":\":8081\"
+},\"healthCheck\":{\"enabled\":true,\"listenAddress\":\":8082\"},\"logger\":{\"sinks\":{\"stdout\":{\"kind\":\"stdout\"}},\"system\":[{\"level\":\"debug\",\"sink\":\"stdout\"}],\"functions\":[{\"level\":\"debug\
+",\"sink\":\"stdout\"}]},\"metrics\":{}}}\n\n\n    .../nuclio/nuclio/pkg/platform/kube/deployer.go:150\nFailed to wait for function readiness.\n\nPod logs:\n\n* test-php-simple-866c5bd44-2vw2n\n18.10.28 20:40:39
+.406 \u001b[37m                processor\u001b[0m \u001b[33m(W)\u001b[0m Platform configuration not found, using defaults {\"path\": \"\"}\n18.10.28 20:40:39.406 \u001b[37m                processor\u001b[0m \u00
+1b[32m(D)\u001b[0m Read platform configuration {\"config\": {\"webAdmin\":{\"enabled\":true,\"listenAddress\":\":8081\"},\"healthCheck\":{\"enabled\":true,\"listenAddress\":\":8082\"},\"logger\":{\"sinks\":{\"st
+dout\":{\"kind\":\"stdout\"}},\"system\":[{\"level\":\"debug\",\"sink\":\"stdout\"}],\"functions\":[{\"level\":\"debug\",\"sink\":\"stdout\"}]},\"metrics\":{}}}\n\nError - open : no such file or directory\n.../n
+uclio/nuclio/cmd/processor/app/processor.go:223\n\nCall stack:\nFailed to open configuration file\n    .../nuclio/nuclio/cmd/processor/app/processor.go:223\n\n\n* test-php-simple-f8b9bbcc8-t9464\n18.10.28 20:40:
+00.291 \u001b[37m                processor\u001b[0m \u001b[33m(W)\u001b[0m Platform configuration not found, using defaults {\"path\": \"\"}\n\nError - open : no such file or directory\n    .../nuclio/nuclio/cmd
+/processor/app/processor.go:223\n\nCall stack:\nFailed to open configuration file\n    .../nuclio/nuclio/cmd/processor/app/processor.go:223\n18.10.28 20:40:00.291 \u001b[37m                processor\u001b[0m \u0
+01b[32m(D)\u001b[0m Read platform configuration {\"config\": {\"webAdmin\":{\"enabled\":true,\"listenAddress\":\":8081\"},\"healthCheck\":{\"enabled\":true,\"listenAddress\":\":8082\"},\"logger\":{\"sinks\":{\"s
+tdout\":{\"kind\":\"stdout\"}},\"system\":[{\"level\":\"debug\",\"sink\":\"stdout\"}],\"functions\":[{\"level\":\"debug\",\"sink\":\"stdout\"}]},\"metrics\":{}}}\n\n", "errCauses": [{"error": "Function in error
+state (\nError - context deadline exceeded\n    .../pkg/platform/kube/controller/function.go:112\n\nCall stack:\nFailed to wait for function resources to be available\n    .../pkg/platform/kube/controller/functi
+on.go:112\n)", "errorVerbose": "\nError - Function in error state (\nError - context deadline exceeded\n    .../pkg/platform/kube/controller/function.go:112\n\nCall stack:\nFailed to wait for function resources
+to be available\n    .../pkg/platform/kube/controller/function.go:112\n)\n    .../nuclio/nuclio/pkg/platform/kube/deployer.go:178\n\nCall stack:\nFunction in error state (\nError - context deadline exceeded\n
+ .../pkg/platform/kube/controller/function.go:112\n\nCall stack:\nFailed to wait for function resources to be available\n    .../pkg/platform/kube/controller/function.go:112\n)\n    .../nuclio/nuclio/pkg/platfor
+m/kube/deployer.go:178\nFunction in error state (\nError - context deadline exceeded\n    .../pkg/platform/kube/controller/function.go:112\n\nCall stack:\nFailed to wait for function resources to be available\n
+   .../pkg/platform/kube/controller/function.go:112\n)", "errorCauses": [{}]}]}
+18.10.28 21:40:46.089    nuctl.platform.updater (I) Updating function {"name": "test-php-simple"}
+
+Error - Function in error state (
+Error - context deadline exceeded
+    .../pkg/platform/kube/controller/function.go:112
+    Call stack:
+Failed to wait for function resources to be available
+    .../pkg/platform/kube/controller/function.go:112
+)
+    .../nuclio/nuclio/pkg/platform/kube/deployer.go:178
+
+Call stack:
+Function in error state (
+Error - context deadline exceeded
+    .../pkg/platform/kube/controller/function.go:112
+
+Call stack:
+Failed to wait for function resources to be available
+    .../pkg/platform/kube/controller/function.go:112
+)
+    .../nuclio/nuclio/pkg/platform/kube/deployer.go:178
+Failed to wait for function readiness.
+
+Pod logs:
+
+* test-php-simple-866c5bd44-2vw2n
+18.10.28 20:40:39.406                 processor (W) Platform configuration not found, using defaults {"path": ""}
+18.10.28 20:40:39.406                 processor (D) Read platform configuration {"config": {"webAdmin":{"enabled":true,"listenAddress":":8081"},"healthCheck":{"enabled":true,"listenAddress":":8082"},"logger":{"sinks":{"stdout":{"kind":"stdout"}},"system":[{"level":"debug","sink":"stdout"}],"functions":[{"level":"debug","sink":"stdout"}]},"metrics":{}}}
+
+Error - open : no such file or directory
+    .../nuclio/nuclio/cmd/processor/app/processor.go:223
+
+Call stack:
+Failed to open configuration file
+    .../nuclio/nuclio/cmd/processor/app/processor.go:223
+
+
+* test-php-simple-f8b9bbcc8-t9464
+18.10.28 20:40:00.291                 processor (W) Platform configuration not found, using defaults {"path": ""}
+
+Error - open : no such file or directory
+    .../nuclio/nuclio/cmd/processor/app/processor.go:223
+
+Call stack:
+Failed to open configuration file
+    .../nuclio/nuclio/cmd/processor/app/processor.go:223
+18.10.28 20:40:00.291                 processor (D) Read platform configuration {"config": {"webAdmin":{"enabled":true,"listenAddress":":8081"},"healthCheck":{"enabled":true,"listenAddress":":8082"},"logger":{"sinks":{"stdout":{"kind":"stdout"}},"system":[{"level":"debug","sink":"stdout"}],"functions":[{"level":"debug","sink":"stdout"}]},"metrics":{}}}
+
+
+    .../nuclio/nuclio/pkg/platform/kube/deployer.go:150
+Failed to deploy function
+    .../nuclio/pkg/platform/abstract/platform.go:128
+```
+
+---
+
+IT WORKS!!!
+
+@see https://github.com/nuclio/nuclio/issues/1016
+
+``` sh
+docker build --no-cache -t codering/test-php-simple .
+docker tag codering/test-php-simple:latest $(minikube ip):5000/codering-test-php-simple:latest
+docker push $(minikube ip):5000/codering-test-php-simple
+nuctl deploy test-php-simple --run-image codering-test-php-simple:latest --runtime shell --handler "proxy-function.sh" --namespace nuclio --registry $(minikube ip):5000 --run-registry localhost:5000
+nuctl invoke test-php-simple -m POST -b " <?= 11+1;"
+# répond "12" :)
+```
