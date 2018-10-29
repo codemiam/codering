@@ -292,3 +292,7 @@ nuctl deploy test-php-simple --run-image codering-test-php-simple:latest --runti
 nuctl invoke test-php-simple -m POST -b " <?= 11+1;"
 # répond "12" :)
 ```
+
+## 29 oct. 2018
+
+Retour de @Javius sur l'issue, et bug corrigé : il fallait expliciter les chemins

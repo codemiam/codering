@@ -23,7 +23,6 @@ COPY proxy-function.sh /opt/nuclio/
 # Readiness probe
 HEALTHCHECK --interval=1s --timeout=30s CMD /usr/local/bin/uhttpc --url http://127.0.0.1:8082/ready || exit 1
 
-# Run processor with configuration and platform configuration
-#CMD [ "processor", "--config", "/etc/nuclio/config/processor/processor.yaml", "--platform-config", "/etc/nuclio/config/platform/platform.yaml" ]
-# CMD ["processor"]
-CMD [ "processor", "--config", "/opt/nuclio/function.yaml"]
+# Run processor with configuration and platform configuration (mandatory options!)
+# @see https://github.com/nuclio/nuclio/blob/b15396bbd184d8717b59b1e572439cf622922a29/pkg/platform/kube/functionres/lazy.go#L1122
+CMD [ "processor", "--config", "/etc/nuclio/config/processor/processor.yaml", "--platform-config", "/etc/nuclio/config/platform/platform.yaml" ]
