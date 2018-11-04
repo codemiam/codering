@@ -28,3 +28,42 @@ No need for credentials, as long as `wsk` is configured to work with the running
 # Let's say there's a /guest/greeting web action:
 curl -k "https://172.17.0.1/api/v1/web/guest/default/greeting.json?name=jd&place=the%20forest"
 ```
+
+### Data seed
+
+> There's no proper data seed for now, in the meantime instructions below provide some guidance into managing actions.
+
+Following along [the official documentation](https://github.com/apache/incubator-openwhisk/blob/master/docs/actions.md), start with some code, saved (anywhere) as greeting.js:
+
+``` js
+/**
+ * @params is a JSON object with optional fields "name" and "place".
+ * @return a JSON object containing the message in a field called "msg".
+ */
+function main(params) {
+  // log the paramaters to stdout
+  console.log('params:', params);
+
+  // if a value for name is provided, use it else use a default
+  var name = params.name || 'stranger';
+
+  // if a value for place is provided, use it else use a default
+  var place = params.place || 'somewhere';
+
+  // construct the message using the values for name and place
+  return {msg:  'Hello, ' + name + ' from ' + place + '!'};
+}
+```
+
+Turn the code into a web action on the FaaS cluster:
+
+``` sh
+wsk -i action create greeting greeting.js --web true
+
+# It should be referenced by:
+curl -k -u $(cat ~/.wskprops | awk -F "=" '/AUTH=/ {print $2}') https://172.17.0.1/api/v1/namespaces/guest/actions
+
+# You can trigger it:
+curl -k https://172.17.0.1/api/v1/web/guest/default/greeting.json
+curl -k "https://172.17.0.1/api/v1/web/guest/default/greeting.json?name=Giant&place=the%20Forest"
+```
