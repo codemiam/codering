@@ -78,3 +78,53 @@ Au submit du formulaire client, on POST vers une action du type codering/system/
 À retenir : wsk action create foo foo.sh --native (le flag --native crée une action de --kind bash, qui est exécutée dans dockerskeleton https://github.com/apache/incubator-openwhisk/pull/3138#issuecomment-366863338) donc une solution rapide mais pas souple.
 
 Pour optimiser les performances, un dry-run pourrait être lancé lorsque l'exercice est ouvert et que quelques caractères sont écrits dans le textarea.
+
+05 nov. 2018 : exploration de l'image openwhisk/dockerskeleton
+
+- https://hub.docker.com/r/openwhisk/dockerskeleton/openwhisk/dockerskeleton.
+- https://github.com/apache/incubator-openwhisk-runtime-docker
+  - core/ la définition de l'image openwhisk/dockerskeleton
+  - gradle/ un script de build/push de l'image vers hub.docker.com, osef
+  - sdk/docker un exemple d'utilisation de l'image de base pour faire une action custom
+
+Si je comprends bien (http://jamesthom.as/blog/2017/01/16/openwhisk-docker-actions/), il s'agit bien d'une base image que je pourrais utiliser comme base (!) pour créer des images de runtimes personnalisées. Essentiellement, dockerskeleton contient une API web pour (POST /init, POST /run, etc.) et quelques dossiers d'importance (/action) que je pourrais récupérer (FROM openwhisk/dockerskeleton as skeleton). De cette façon, comme imaginé, un POST de code depuis le client web déclencherait un conductor, qui génèrerait (si besoin, cold start) une action à la volée en utilisant le bon runtime (ie. --docker codering/runtime-php par exemple, basé sur dockerskeleton).
+
+TODO:
+
+- créer une image codering/runtime-php :
+  - basée sur PHP, installe les dépendances du runtime & specs runner, et incorpore openwhisk/dockerskeleton
+  - script /action/exec qui utilise l'argument JSON de la ligne de commande, et retourne du JSON sur stdout
+  - cœur du script qui « eval » le PHP reçu en payload de l'action, comme déjà fait avec l'action nuclio de test
+  - à terme, il faudra run les specs qui auront été bundle dans l'action à un emplacement /action/specs.php typiquement
+- créer une action avec cette image (--docker codering/runtime-php) :
+  - (dev) à tester : utiliser l'image locale directement
+  - (dev/prod) l'héberger sur hub.docker.com (on pourrait imaginer héberger des images dans un registry du cluster k8s)
+- déclencher l'action en envoyant du code PHP à run / tester en payload de la requête de triggering
+
+En suivant le tutoriel http://jamesthom.as/blog/2017/01/16/openwhisk-docker-actions/ je peux dev un runtime en local :
+
+``` sh
+# dossier faas/docker-compose/playground
+docker build -t codering/runtime-php .
+docker run -it -p 8080:8080 codering/runtime-php
+
+# dans un autre terminal, même dossier
+
+# préparation du JSON pour init le container qui tourne (mime le travail d'un Invoker)
+zip exec.zip exec
+base64 exec.zip # j'ai pas réussi à faire une commande de génération automatique de init.json donc je le fais à la main
+http post localhost:8080/init < init.json
+echo "{}" | jq '{value: .}' | http post localhost:8080/run
+```
+
+Pour tester l'action dans le FaaS, il faut push l'image sur hub.docker.com :
+
+``` sh
+docker push codering/runtime-php
+# wa === wsk -i action
+wa create runtime-php exec.zip --docker codering/runtime-php --web true
+wa invoke runtime-php -b -r
+```
+
+> **IMPORTANT** : il a fallu que je fetch https://github.com/apache/incubator-openwhisk-runtime-docker/blob/master/core/actionProxy/actionproxy.py pour forcer un chmod 0755 sur /action/exec, normalement il devrait avoir les bons droits mais nope. Ça faisait foirer le verify (il y a des logs de debugs partout du coup, mais la seule réelle modif est le chmod).
+> https://github.com/apache/incubator-openwhisk-runtime-docker/issues/65

@@ -1,6 +1,6 @@
 {
   "projects": {
     "website": "git@github.com:codemiam/website.git",
-    "faas": "git@github.com:apache/incubator-openwhisk-devtools.git"
+    "faas": "git@github.com:codemiam/faas.git"
   }
 }
