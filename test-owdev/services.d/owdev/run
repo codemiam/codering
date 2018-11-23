@@ -1,0 +1,8 @@
+#!/bin/sh
+
+echo "Starting the cluster..."
+cd /home/ow/
+ls -al
+#s6-setuidgid daemon
+#make run
+while sleep 3600; do :; done

@@ -2,21 +2,23 @@ version: '3.7'
 
 services:
 
-  # Nuclio - Open source FaaS enabling "serverless" runtime execution
-  # https://nuclio.io/docs/latest/introduction/
-  x:
-    image: nuclio/dashboard:stable-amd64
-    restart: always
-    ports:
-      - 8070:8070
+  # codering-faas is the runtimes' cluster.
+  # Powered by OpenWhisk, an open-source FaaS enabling "serverless" runtime execution.
+  # https://openwhisk.incubator.apache.org/
+  faas:
+    build:
+      context: ./test-owdev
+      dockerfile: Dockerfile
+    #restart: always
+    privileged: true
+    #command: make run
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - data-codering-x:/tmp
+      - ./incubator-openwhisk-devtools/docker-compose/:/home/ow/
+      - /var/log/owdev
+
+# TODO: en fait il faut juste monter un volume ./incubator…/docker-compose:/home/ow, faire le volume /var/run/docker.sock:/var/run/docker.sock et baser l'image sur docker, y installer docker-compose, make etc. mais c'est tout, ça devrait lancer le docker-compose dans un container mais géré par le docker de la machine hôte.
 
   #ui: TODO: unredux client
 
   #api: TODO: symfo/nodejs API (if need be)
-
-volumes:
-  # FaaS dataset
-  data-codering-x:

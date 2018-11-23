@@ -1,0 +1,8 @@
+#!/bin/sh
+
+#echo "Forwarding stdin output to /var/log/owdev"
+#mkdir -p /var/log/owdev
+#whoami
+#ls -al /var/log/ 
+#touch /var/log/owdev/lock
+#exec logutil-service /var/log/owdev

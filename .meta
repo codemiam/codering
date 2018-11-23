@@ -1,6 +1,6 @@
 {
   "projects": {
-    "runtime-node": "git@github.com:codemiam/runtime-node.git",
-    "website": "git@github.com:codemiam/website.git"
+    "website": "git@github.com:codemiam/website.git",
+    "faas": "git@github.com:codemiam/faas.git"
   }
 }
